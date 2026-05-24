@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Support — Call Us</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --ink: #0f0e0d; --paper: #f5f0e8; --accent: #c8401a; --accent-dark: #a33015;
+      --muted: #7a7167; --green: #2d6a4f; --border: #d4cfc4; --yellow: #b8860b;
+    }
+    body {
+      font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink);
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 2rem;
+      background-image: radial-gradient(ellipse at 20% 50%, rgba(200,64,26,0.04) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(200,64,26,0.03) 0%, transparent 40%);
+    }
+    .card {
+      background: white; border: 1px solid var(--border); border-radius: 2px;
+      width: 100%; max-width: 460px; overflow: hidden;
+      box-shadow: 0 4px 40px rgba(15,14,13,0.08), 0 1px 4px rgba(15,14,13,0.06);
+    }
+    .card-header {
+      background: var(--ink); padding: 2rem 2.5rem 1.75rem; position: relative; overflow: hidden;
+    }
+    .card-header::after {
+      content: ''; position: absolute; bottom: 0; right: 0; width: 120px; height: 120px;
+      background: radial-gradient(circle, rgba(200,64,26,0.3) 0%, transparent 70%);
+      transform: translate(30%, 30%);
+    }
+    .brand { font-family: 'DM Serif Display', serif; font-size: 1.5rem; color: white; letter-spacing: -0.02em; margin-bottom: 0.2rem; }
+    .tagline { font-size: 0.75rem; color: rgba(255,255,255,0.45); font-weight: 300; letter-spacing: 0.1em; text-transform: uppercase; }
+    .card-body { padding: 2rem 2.5rem; }
+    .section-label { font-size: 0.68rem; font-weight: 500; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
+    .input-group { margin-bottom: 1.25rem; }
+    input[type="text"] {
+      width: 100%; padding: 0.8rem 1rem; border: 1px solid var(--border); border-radius: 2px;
+      background: var(--paper); font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+      color: var(--ink); outline: none; transition: border-color 0.2s;
+    }
+    input[type="text"]:focus { border-color: var(--ink); background: white; }
+    input[type="text"]::placeholder { color: var(--muted); }
+
+    #state-idle, #state-queued, #state-calling, #state-ended { display: none; }
+    #state-idle { display: block; }
+
+    .call-btn {
+      width: 100%; padding: 0.95rem; background: var(--accent); color: white; border: none;
+      border-radius: 2px; font-family: 'DM Serif Display', serif; font-size: 1.05rem;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 0.6rem;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .call-btn:hover { background: var(--accent-dark); }
+    .call-btn:active { transform: scale(0.99); }
+    .call-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; transform: none; }
+    .call-btn svg { width: 17px; height: 17px; }
+
+    /* Queue */
+    .queue-display { text-align: center; padding: 1.25rem 0; }
+    .queue-position { font-family: 'DM Serif Display', serif; font-size: 3.5rem; color: var(--accent); line-height: 1; margin-bottom: 0.3rem; }
+    .queue-label { font-size: 0.82rem; color: var(--muted); margin-bottom: 0.5rem; }
+    .queue-eta { font-size: 0.75rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .waiting-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 1.25rem; }
+    .waiting-dots span { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: pulse 1.4s ease-in-out infinite; opacity: 0.4; }
+    .waiting-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .waiting-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%,100%{opacity:0.2;transform:scale(0.8)} 50%{opacity:1;transform:scale(1)} }
+    .cancel-btn {
+      width: 100%; padding: 0.7rem; background: transparent; border: 1px solid var(--border);
+      border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+      color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .cancel-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Calling */
+    .calling-header { text-align: center; padding: 0.5rem 0 1.25rem; }
+    .agent-avatar {
+      width: 64px; height: 64px; background: var(--ink); border-radius: 50%;
+      margin: 0 auto 0.75rem; display: flex; align-items: center; justify-content: center;
+      font-family: 'DM Serif Display', serif; font-size: 1.6rem; color: white; position: relative;
+    }
+    .agent-avatar::after {
+      content: ''; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid var(--green); animation: ring-pulse 2s ease-in-out infinite;
+    }
+    .agent-avatar.on-hold::after { border-color: var(--yellow); animation: none; }
+    @keyframes ring-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.08)} }
+    .connected-label { font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--green); font-weight: 500; margin-bottom: 0.3rem; }
+    .connected-label.hold { color: var(--yellow); }
+    .agent-name-display { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 0.2rem; }
+    .call-timer { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+    /* Call controls */
+    .call-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin: 1.25rem 0; }
+    .ctrl-btn {
+      padding: 0.75rem 0.5rem; border-radius: 2px; border: 1px solid var(--border);
+      background: var(--paper); font-family: 'DM Sans', sans-serif; font-size: 0.78rem;
+      color: var(--ink); cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; gap: 0.35rem; transition: all 0.2s; font-weight: 500;
+    }
+    .ctrl-btn svg { width: 18px; height: 18px; }
+    .ctrl-btn:hover { border-color: var(--ink); }
+    .ctrl-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
+    .ctrl-btn.active.danger { background: #dc2626; border-color: #dc2626; }
+    .ctrl-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Volume slider */
+    .volume-row { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .volume-row svg { width: 16px; height: 16px; color: var(--muted); flex-shrink: 0; }
+    input[type="range"] {
+      flex: 1; -webkit-appearance: none; height: 3px; background: var(--border); border-radius: 2px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; background: var(--ink); border-radius: 50%; cursor: pointer; }
+    .volume-val { font-size: 0.75rem; color: var(--muted); width: 2.5rem; text-align: right; }
+
+    /* Signal quality */
+    .signal-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .signal-bars { display: flex; align-items: flex-end; gap: 2px; }
+    .signal-bars span { width: 4px; background: var(--border); border-radius: 1px; }
+    .signal-bars span:nth-child(1) { height: 6px; }
+    .signal-bars span:nth-child(2) { height: 10px; }
+    .signal-bars span:nth-child(3) { height: 14px; }
+    .signal-bars span:nth-child(4) { height: 18px; }
+    .signal-bars.good span { background: var(--green); }
+    .signal-bars.medium span:nth-child(1),.signal-bars.medium span:nth-child(2),.signal-bars.medium span:nth-child(3) { background: var(--yellow); }
+    .signal-bars.poor span:nth-child(1) { background: var(--accent); }
+    .signal-label { font-size: 0.7rem; color: var(--muted); }
+
+    /* Hold banner */
+    .hold-banner {
+      background: #fef9c3; border: 1px solid #fde047; border-radius: 2px;
+      padding: 0.65rem 1rem; text-align: center; font-size: 0.8rem; color: #854d0e;
+      margin-bottom: 1rem; display: none; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .hold-banner.visible { display: flex; }
+
+    .end-btn {
+      width: 100%; padding: 0.85rem; background: #fee2e2; color: #dc2626;
+      border: 1px solid #fecaca; border-radius: 2px; font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem; font-weight: 500; cursor: pointer; display: flex;
+      align-items: center; justify-content: center; gap: 0.5rem; transition: all 0.2s;
+    }
+    .end-btn:hover { background: #fecaca; }
+
+    /* Ended */
+    .ended-display { text-align: center; padding: 0.75rem 0 0.5rem; }
+    .check-icon { width: 52px; height: 52px; background: #d1fae5; border-radius: 50%; margin: 0 auto 0.75rem; display: flex; align-items: center; justify-content: center; }
+    .ended-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; margin-bottom: 0.4rem; }
+    .ended-meta { font-size: 0.82rem; color: var(--muted); margin-bottom: 1.25rem; }
+    .rating-row { margin-bottom: 1.25rem; }
+    .rating-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
+    .stars { display: flex; justify-content: center; gap: 0.4rem; }
+    .star { font-size: 1.5rem; cursor: pointer; color: var(--border); transition: color 0.15s; }
+    .star.lit { color: #f59e0b; }
+    .new-call-btn {
+      width: 100%; padding: 0.8rem; background: var(--paper); border: 1px solid var(--border);
+      border-radius: 2px; font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+      color: var(--ink); cursor: pointer; transition: all 0.2s;
+    }
+    .new-call-btn:hover { border-color: var(--ink); }
+    .info-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.77rem; color: var(--muted); margin-top: 0.85rem; }
+    .info-row svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .status-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.28rem 0.65rem; border-radius: 100px; margin-bottom: 1rem; }
+    .status-badge.online { background: #d1fae5; color: #065f46; }
+    .status-badge.offline { background: #fee2e2; color: #991b1b; }
+    .status-badge .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    audio { display: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="card-header">
+    <div class="brand">Support Line</div>
+    <div class="tagline">We're here to help</div>
+  </div>
+  <div class="card-body">
+
+    <!-- IDLE -->
+    <div id="state-idle">
+      <div id="agent-status" class="status-badge online"><span class="dot"></span><span id="status-text">Agents available</span></div>
+      <div class="section-label">Your name</div>
+      <div class="input-group">
+        <input type="text" id="customer-name" placeholder="Enter your name" maxlength="40" />
+      </div>
+      <button class="call-btn" id="call-btn" onclick="startCall()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.8a19.79 19.79 0 01-3.07-8.68A2 2 0 012 .93h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+        Call Support
+      </button>
+      <div class="info-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+        Encrypted browser-to-browser call. No phone needed.
+      </div>
+    </div>
+
+    <!-- QUEUED -->
+    <div id="state-queued">
+      <div class="section-label">All agents busy</div>
+      <div class="queue-display">
+        <div class="queue-position" id="queue-position">1</div>
+        <div class="queue-label">in queue — connecting you shortly</div>
+        <div class="queue-eta" id="queue-eta">Estimated wait: ~1 min 30 sec</div>
+        <div class="waiting-dots"><span></span><span></span><span></span></div>
+      </div>
+      <button class="cancel-btn" onclick="cancelCall()">Cancel &amp; hang up</button>
+    </div>
+
+    <!-- IN CALL -->
+    <div id="state-calling">
+      <div class="hold-banner" id="hold-banner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+        You are on hold — the agent will be back shortly
+      </div>
+
+      <div class="calling-header">
+        <div class="agent-avatar" id="agent-initial">A</div>
+        <div class="connected-label" id="connected-label">● Connected</div>
+        <div class="agent-name-display" id="agent-name-display">Agent</div>
+        <div class="call-timer" id="call-timer">00:00</div>
+      </div>
+
+      <div class="signal-row">
+        <div>
+          <div class="signal-bars good" id="signal-bars">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+        <div class="signal-label" id="signal-label">Good connection</div>
+      </div>
+
+      <div class="call-controls">
+        <button class="ctrl-btn" id="btn-mute" onclick="toggleMute()">
+          <svg id="mute-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+          </svg>
+          <span id="mute-label">Mute</span>
+        </button>
+        <button class="ctrl-btn" id="btn-speaker" onclick="toggleSpeaker()">
+          <svg id="speaker-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+          </svg>
+          <span id="speaker-label">Speaker</span>
+        </button>
+      </div>
+
+      <div class="volume-row">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/></svg>
+        <input type="range" id="volume-slider" min="0" max="100" value="100" oninput="setVolume(this.value)" />
+        <span class="volume-val" id="volume-val">100%</span>
+      </div>
+
+      <button class="end-btn" onclick="endCall()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M10.68 13.31a16 16 0 003.41 2.6l1.27-1.27a2 2 0 012.11-.45 12.84 12.84 0 002.81.7 2 2 0 011.72 2v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07 2 2 0 01-.37-.31M3 3l18 18"/>
+        </svg>
+        End Call
+      </button>
+    </div>
+
+    <!-- ENDED -->
+    <div id="state-ended">
+      <div class="ended-display">
+        <div class="check-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg></div>
+        <div class="ended-title">Call Complete</div>
+        <div class="ended-meta" id="call-summary">Duration: 0:00</div>
+      </div>
+      <div class="rating-row">
+        <div class="rating-label">How was your experience?</div>
+        <div class="stars" id="stars">
+          <span class="star" onclick="rateStar(1)">★</span>
+          <span class="star" onclick="rateStar(2)">★</span>
+          <span class="star" onclick="rateStar(3)">★</span>
+          <span class="star" onclick="rateStar(4)">★</span>
+          <span class="star" onclick="rateStar(5)">★</span>
+        </div>
+      </div>
+      <button class="new-call-btn" onclick="resetToIdle()">Start a new call</button>
+    </div>
+
+  </div>
+</div>
+<audio id="remote-audio" autoplay playsinline></audio>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+  const socket = io();
+  let pc = null, localStream = null, currentCallId = null, currentAgentId = null;
+  let timerInterval = null, callSeconds = 0;
+  let isMuted = false, isSpeakerOff = false;
+  let signalInterval = null;
+
+  function showState(name) {
+    ['idle','queued','calling','ended'].forEach(s =>
+      document.getElementById(`state-${s}`).style.display = s === name ? 'block' : 'none');
+  }
+
+  function startTimer() {
+    callSeconds = 0;
+    timerInterval = setInterval(() => {
+      callSeconds++;
+      const m = String(Math.floor(callSeconds/60)).padStart(2,'0');
+      const s = String(callSeconds%60).padStart(2,'0');
+      document.getElementById('call-timer').textContent = `${m}:${s}`;
+    }, 1000);
+  }
+
+  function stopTimer() { clearInterval(timerInterval); }
+  function formatDuration(s) { return `${Math.floor(s/60)}m ${s%60}s`; }
+
+  // Signal quality monitoring
+  function startSignalMonitor() {
+    signalInterval = setInterval(async () => {
+      if (!pc) return;
+      try {
+        const stats = await pc.getStats();
+        let rtt = null;
+        stats.forEach(r => { if (r.type === 'candidate-pair' && r.state === 'succeeded') rtt = r.currentRoundTripTime; });
+        const bars = document.getElementById('signal-bars');
+        const label = document.getElementById('signal-label');
+        if (rtt === null) return;
+        if (rtt < 0.1) { bars.className = 'signal-bars good'; label.textContent = 'Good connection'; }
+        else if (rtt < 0.3) { bars.className = 'signal-bars medium'; label.textContent = 'Fair connection'; }
+        else { bars.className = 'signal-bars poor'; label.textContent = 'Poor connection'; }
+      } catch(e) {}
+    }, 3000);
+  }
+
+  function stopSignalMonitor() { clearInterval(signalInterval); }
+
+  // WebRTC
+  async function createPeerConnection(remoteId) {
+    const config = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+    pc = new RTCPeerConnection(config);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    pc.ontrack = e => { document.getElementById('remote-audio').srcObject = e.streams[0]; };
+    pc.onicecandidate = e => { if (e.candidate) socket.emit('webrtc-ice', { to: remoteId, candidate: e.candidate }); };
+  }
+
+  async function startCall() {
+    const name = document.getElementById('customer-name').value.trim() || 'Customer';
+    try { localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false }); }
+    catch { alert('Microphone access is required.'); return; }
+    socket.emit('customer-call-request', { name });
+    document.getElementById('call-btn').disabled = true;
+  }
+
+  function cancelCall() {
+    socket.emit('customer-cancel');
+    if (localStream) localStream.getTracks().forEach(t => t.stop());
+    localStream = null;
+    showState('idle');
+    document.getElementById('call-btn').disabled = false;
+  }
+
+  async function endCall() {
+    if (currentCallId) socket.emit('end-call', { callId: currentCallId });
+    hangup(callSeconds);
+  }
+
+  function hangup(duration) {
+    stopTimer(); stopSignalMonitor();
+    if (pc) { pc.close(); pc = null; }
+    if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+    document.getElementById('remote-audio').srcObject = null;
+    document.getElementById('call-summary').textContent = `Duration: ${formatDuration(duration||0)}`;
+    isMuted = false; isSpeakerOff = false;
+    showState('ended');
+    currentCallId = null; currentAgentId = null;
+  }
+
+  function resetToIdle() {
+    showState('idle');
+    document.getElementById('call-btn').disabled = false;
+    document.getElementById('call-timer').textContent = '00:00';
+    document.getElementById('hold-banner').classList.remove('visible');
+    document.getElementById('btn-mute').classList.remove('active','danger');
+    document.getElementById('mute-label').textContent = 'Mute';
+    document.getElementById('stars').querySelectorAll('.star').forEach(s => s.classList.remove('lit'));
+  }
+
+  function toggleMute() {
+    isMuted = !isMuted;
+    if (localStream) localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+    const btn = document.getElementById('btn-mute');
+    btn.classList.toggle('active', isMuted);
+    btn.classList.toggle('danger', isMuted);
+    document.getElementById('mute-label').textContent = isMuted ? 'Unmute' : 'Mute';
+    document.getElementById('mute-icon').innerHTML = isMuted
+      ? '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23M12 19v4M8 23h8"/>'
+      : '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>';
+    if (currentCallId) socket.emit('customer-mute', { callId: currentCallId, muted: isMuted });
+  }
+
+  function toggleSpeaker() {
+    isSpeakerOff = !isSpeakerOff;
+    const audio = document.getElementById('remote-audio');
+    audio.muted = isSpeakerOff;
+    const btn = document.getElementById('btn-speaker');
+    btn.classList.toggle('active', isSpeakerOff);
+    document.getElementById('speaker-label').textContent = isSpeakerOff ? 'Muted' : 'Speaker';
+    document.getElementById('speaker-icon').innerHTML = isSpeakerOff
+      ? '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/>'
+      : '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>';
+  }
+
+  function setVolume(val) {
+    document.getElementById('remote-audio').volume = val / 100;
+    document.getElementById('volume-val').textContent = `${val}%`;
+  }
+
+  function rateStar(n) {
+    document.getElementById('stars').querySelectorAll('.star').forEach((s, i) => s.classList.toggle('lit', i < n));
+  }
+
+  // Socket events
+  socket.on('call-queued', ({ position, estimatedWait }) => {
+    document.getElementById('queue-position').textContent = position;
+    const m = Math.floor(estimatedWait/60), s = estimatedWait%60;
+    document.getElementById('queue-eta').textContent = `Estimated wait: ~${m > 0 ? m+'m ' : ''}${s}s`;
+    showState('queued');
+  });
+
+  socket.on('queue-updated', queue => {
+    const myPos = queue.findIndex(c => c.socketId === socket.id);
+    if (myPos !== -1) {
+      document.getElementById('queue-position').textContent = myPos + 1;
+      const wait = (myPos+1) * 90;
+      const m = Math.floor(wait/60), s = wait%60;
+      document.getElementById('queue-eta').textContent = `Estimated wait: ~${m > 0 ? m+'m ' : ''}${s}s`;
+    }
+  });
+
+  socket.on('call-accepted', async ({ callId, agentId, agentName }) => {
+    currentCallId = callId; currentAgentId = agentId;
+    document.getElementById('agent-name-display').textContent = agentName;
+    document.getElementById('agent-initial').textContent = agentName.charAt(0).toUpperCase();
+    showState('calling'); startTimer();
+    await createPeerConnection(agentId);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    socket.emit('webrtc-offer', { to: agentId, offer });
+    startSignalMonitor();
+  });
+
+  socket.on('call-transferred', ({ agentName, agentId }) => {
+    currentAgentId = agentId;
+    document.getElementById('agent-name-display').textContent = agentName;
+    document.getElementById('agent-initial').textContent = agentName.charAt(0).toUpperCase();
+    document.getElementById('hold-banner').classList.remove('visible');
+    document.getElementById('connected-label').textContent = '● Connected';
+    document.getElementById('connected-label').className = 'connected-label';
+    document.getElementById('agent-initial').className = 'agent-avatar';
+  });
+
+  socket.on('call-hold-changed', ({ onHold }) => {
+    document.getElementById('hold-banner').classList.toggle('visible', onHold);
+    document.getElementById('connected-label').textContent = onHold ? '⏸ On Hold' : '● Connected';
+    document.getElementById('connected-label').className = onHold ? 'connected-label hold' : 'connected-label';
+    document.getElementById('agent-initial').className = onHold ? 'agent-avatar on-hold' : 'agent-avatar';
+    const audio = document.getElementById('remote-audio');
+    if (onHold) audio.muted = true; else if (!isSpeakerOff) audio.muted = false;
+  });
+
+  socket.on('webrtc-answer', async ({ answer }) => { if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer)); });
+  socket.on('webrtc-ice', async ({ candidate }) => { if (pc) await pc.addIceCandidate(new RTCIceCandidate(candidate)); });
+  socket.on('call-ended', ({ duration }) => { hangup(duration || callSeconds); });
+</script>
+</body>
+</html>
